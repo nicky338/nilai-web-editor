@@ -1,0 +1,172 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>📚 Rekapan Nilai Nicky</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to bottom, #e0f2f1, #ffffff);
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #00796b;
+      animation: fadeIn 1.2s ease-in;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      animation: slideUp 1s ease;
+    }
+    select, input[type=number], button {
+      padding: 8px;
+      margin: 5px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+    button {
+      background-color: #00796b;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #004d40;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #b2dfdb;
+    }
+    .summary {
+      margin-top: 20px;
+      font-weight: bold;
+      color: #004d40;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    @keyframes slideUp {
+      from { transform: translateY(30px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+  <h1>📚 Rekapan Nilai Nicky</h1>
+  <div class="container">
+    <label for="semester">Semester:</label>
+    <select id="semester" onchange="loadMapel()">
+      <option value="1">Semester 1</option>
+      <option value="2">Semester 2</option>
+      <option value="3">Semester 3</option>
+      <option value="4">Semester 4</option>
+      <option value="5">Semester 5</option>
+      <option value="6">Semester 6</option>
+    </select>
+    <div id="nilaiForm"></div>
+    <button onclick="simpanNilai()">💾 Simpan Nilai</button>
+    <div id="tabelNilai"></div>
+    <div class="summary" id="summary"></div>
+  </div>
+
+  <script>
+    const semuaMapel = [
+      "PENDIDIKAN AGAMA HINDU DAN BUDI PEKERTI",
+      "PENDIDIKAN PANCASILA",
+      "BAHASA INDONESIA",
+      "MATEMATIKA (UMUM)",
+      "BAHASA INGGRIS",
+      "PENDIDIKAN JASMANI, OLAHRAGA, DAN KESEHATAN",
+      "INFORMATIKA",
+      "PRAKARYA DAN KEWIRAUSAHAAN",
+      "MUATAN LOKAL POTENSI DAERAH",
+      "SENI BUDAYA",
+      "MATEMATIKA TINGKAT LANJUT (PILIHAN)",
+      "ILMU PENGETAHUAN ALAM",
+      "ILMU PENGETAHUAN SOSIAL",
+      "BIOLOGI (PILIHAN)",
+      "KIMIA (PILIHAN)",
+      "FISIKA",
+      "EKONOMI (PILIHAN)",
+      "SEJARAH",
+      "GEOGRAFI",
+      "SOSIOLOGI"
+    ];
+
+    function getMapelBySemester(semester) {
+      return semuaMapel;
+    }
+
+    function loadMapel() {
+      const semester = document.getElementById('semester').value;
+      const mapelList = getMapelBySemester(parseInt(semester));
+      const formDiv = document.getElementById('nilaiForm');
+      formDiv.innerHTML = '';
+      mapelList.forEach(mapel => {
+        formDiv.innerHTML += `
+          <div>
+            ${mapel}<br>
+            <input type="number" id="${mapel}" placeholder="Masukkan nilai" min="0" max="100">
+          </div>
+        `;
+      });
+      loadTabelNilai();
+    }
+
+    function simpanNilai() {
+      const semester = document.getElementById('semester').value;
+      const mapelList = getMapelBySemester(parseInt(semester));
+      const data = {};
+      mapelList.forEach(mapel => {
+        const val = parseFloat(document.getElementById(mapel).value);
+        if (!isNaN(val)) data[mapel] = val;
+      });
+      localStorage.setItem(`nilai_semester_${semester}`, JSON.stringify(data));
+      loadTabelNilai();
+    }
+
+    function loadTabelNilai() {
+      const semester = document.getElementById('semester').value;
+      const data = JSON.parse(localStorage.getItem(`nilai_semester_${semester}`)) || {};
+      let html = '<table><tr><th>Mapel</th><th>Nilai</th></tr>';
+      let total = 0, tertinggi = -1, terendah = 999, mapelTinggi = '', mapelRendah = '', jumlah = 0;
+      for (const mapel in data) {
+        const nilai = data[mapel];
+        total += nilai;
+        if (nilai > tertinggi) { tertinggi = nilai; mapelTinggi = mapel; }
+        if (nilai < terendah) { terendah = nilai; mapelRendah = mapel; }
+        html += `<tr><td>${mapel}</td><td>${nilai}</td></tr>`;
+        jumlah++;
+      }
+      html += '</table>';
+      document.getElementById('tabelNilai').innerHTML = html;
+
+      let rata2 = jumlah > 0 ? (total / jumlah).toFixed(2) : '-';
+      document.getElementById('summary').innerText = jumlah > 0 ?
+        `📊 Rata-rata: ${rata2}
+🏆 Tertinggi: ${mapelTinggi} (${tertinggi})
+💔 Terendah: ${mapelRendah} (${terendah})` : '';
+    }
+
+    window.onload = loadMapel;
+  </script>
+</body>
+</html>
