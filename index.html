@@ -1,12 +1,10 @@
-
-<!DOCTYPE html>
-<html>
+<!DOCTYPE html><html>
 <head>
   <title>📚 Rekapan Nilai Nicky</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(to bottom, #e0f2f1, #ffffff);
+      background: linear-gradient(to bottom, #e0f7fa, #ffffff);
       margin: 0;
       padding: 20px;
       color: #333;
@@ -14,27 +12,43 @@
     h1 {
       text-align: center;
       color: #00796b;
-      animation: fadeIn 1.2s ease-in;
+      animation: fadeIn 1s ease-in;
     }
     .container {
       max-width: 900px;
       margin: auto;
-      background: #fff;
+      background: #ffffff;
       border-radius: 12px;
-      padding: 20px;
+      padding: 25px;
       box-shadow: 0 0 15px rgba(0,0,0,0.1);
-      animation: slideUp 1s ease;
+      animation: slideUp 0.8s ease;
     }
-    select, input[type=number], button {
-      padding: 8px;
-      margin: 5px;
+    .custom-select {
+      position: relative;
+      width: 200px;
+      margin: 10px auto;
+    }
+    .custom-select select {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
       border-radius: 6px;
       border: 1px solid #ccc;
-      font-size: 14px;
+      background: #f0f0f0;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    .custom-select select:hover {
+      background: #e0f2f1;
     }
     button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
       background-color: #00796b;
       color: white;
+      border: none;
+      border-radius: 8px;
       cursor: pointer;
       transition: background-color 0.3s ease;
     }
@@ -44,20 +58,33 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 15px;
+      margin-top: 20px;
+      animation: fadeIn 0.8s ease;
     }
     th, td {
       border: 1px solid #ccc;
-      padding: 8px;
+      padding: 10px;
       text-align: center;
     }
     th {
-      background-color: #b2dfdb;
+      background-color: #b2ebf2;
     }
     .summary {
       margin-top: 20px;
       font-weight: bold;
       color: #004d40;
+    }
+    .fade {
+      animation: fadeIn 0.8s ease;
+    }
+    .notif {
+      background: #d4edda;
+      color: #155724;
+      padding: 10px;
+      border-radius: 8px;
+      margin-top: 15px;
+      text-align: center;
+      display: none;
     }
     @keyframes fadeIn {
       from { opacity: 0; }
@@ -72,22 +99,23 @@
 <body>
   <h1>📚 Rekapan Nilai Nicky</h1>
   <div class="container">
-    <label for="semester">Semester:</label>
-    <select id="semester" onchange="loadMapel()">
-      <option value="1">Semester 1</option>
-      <option value="2">Semester 2</option>
-      <option value="3">Semester 3</option>
-      <option value="4">Semester 4</option>
-      <option value="5">Semester 5</option>
-      <option value="6">Semester 6</option>
-    </select>
-    <div id="nilaiForm"></div>
+    <div class="custom-select">
+      <label for="semester">Pilih Semester:</label>
+      <select id="semester" onchange="loadMapel()">
+        <option value="1">Semester 1</option>
+        <option value="2">Semester 2</option>
+        <option value="3">Semester 3</option>
+        <option value="4">Semester 4</option>
+        <option value="5">Semester 5</option>
+        <option value="6">Semester 6</option>
+      </select>
+    </div>
+    <div id="nilaiForm" class="fade"></div>
     <button onclick="simpanNilai()">💾 Simpan Nilai</button>
+    <div class="notif" id="notif">✅ Nilai berhasil disimpan!</div>
     <div id="tabelNilai"></div>
     <div class="summary" id="summary"></div>
-  </div>
-
-  <script>
+  </div>  <script>
     const semuaMapel = [
       "PENDIDIKAN AGAMA HINDU DAN BUDI PEKERTI",
       "PENDIDIKAN PANCASILA",
@@ -100,8 +128,6 @@
       "MUATAN LOKAL POTENSI DAERAH",
       "SENI BUDAYA",
       "MATEMATIKA TINGKAT LANJUT (PILIHAN)",
-      "ILMU PENGETAHUAN ALAM",
-      "ILMU PENGETAHUAN SOSIAL",
       "BIOLOGI (PILIHAN)",
       "KIMIA (PILIHAN)",
       "FISIKA",
@@ -112,12 +138,13 @@
     ];
 
     function getMapelBySemester(semester) {
-      return semuaMapel;
+      if (semester <= 2) return semuaMapel;
+      return semuaMapel.filter(m => !m.includes("PILIHAN") || ["EKONOMI (PILIHAN)", "MATEMATIKA TINGKAT LANJUT", "KIMIA (PILIHAN)", "BIOLOGI (PILIHAN)"].includes(m));
     }
 
     function loadMapel() {
-      const semester = document.getElementById('semester').value;
-      const mapelList = getMapelBySemester(parseInt(semester));
+      const semester = parseInt(document.getElementById('semester').value);
+      const mapelList = getMapelBySemester(semester);
       const formDiv = document.getElementById('nilaiForm');
       formDiv.innerHTML = '';
       mapelList.forEach(mapel => {
@@ -141,6 +168,9 @@
       });
       localStorage.setItem(`nilai_semester_${semester}`, JSON.stringify(data));
       loadTabelNilai();
+      const notif = document.getElementById("notif");
+      notif.style.display = "block";
+      setTimeout(() => notif.style.display = "none", 2500);
     }
 
     function loadTabelNilai() {
@@ -158,15 +188,11 @@
       }
       html += '</table>';
       document.getElementById('tabelNilai').innerHTML = html;
-
       let rata2 = jumlah > 0 ? (total / jumlah).toFixed(2) : '-';
       document.getElementById('summary').innerText = jumlah > 0 ?
-        `📊 Rata-rata: ${rata2}
-🏆 Tertinggi: ${mapelTinggi} (${tertinggi})
-💔 Terendah: ${mapelRendah} (${terendah})` : '';
+        `📊 Rata-rata: ${rata2}\n🏆 Tertinggi: ${mapelTinggi} (${tertinggi})\n💔 Terendah: ${mapelRendah} (${terendah})` : '';
     }
 
     window.onload = loadMapel;
-  </script>
-</body>
+  </script></body>
 </html>
