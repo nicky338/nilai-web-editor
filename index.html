@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>📚 Rekapan Nilai Nicky</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(to bottom, #e3f2fd, #ffffff);
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #1976d2;
+      margin-bottom: 10px;
+    }
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 0 12px rgba(0,0,0,0.1);
+    }
+    select, input[type=number], button {
+      padding: 8px;
+      margin: 6px 4px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      font-size: 14px;
+    }
+    button {
+      background-color: #1976d2;
+      color: white;
+      border: none;
+      cursor: pointer;
+      transition: 0.3s ease;
+    }
+    button:hover {
+      background-color: #0d47a1;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #bbdefb;
+    }
+    .summary {
+      margin-top: 15px;
+      font-weight: bold;
+      color: #0d47a1;
+    }
+    canvas {
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <h1>📚 Rekapan Nilai Nicky</h1>
+  <div class="container">
+    <label for="semester">Pilih Semester:</label>
+    <select id="semester" onchange="loadMapel()">
+      <option value="1">Semester 1</option>
+      <option value="2">Semester 2</option>
+      <option value="3">Semester 3</option>
+      <option value="4">Semester 4</option>
+      <option value="5">Semester 5</option>
+      <option value="6">Semester 6</option>
+    </select>
+    <div id="nilaiForm"></div>
+    <button onclick="simpanNilai()">💾 Simpan Nilai</button>
+    <button onclick="exportPDF()">📄 Export PDF</button>
+    <button onclick="exportExcel()">📊 Export Excel</button>
+    <div id="tabelNilai"></div>
+    <div class="summary" id="summary"></div>
+    <canvas id="grafikNilai" height="120"></canvas>
+  </div>
+
+  <script>
+    const mapelX = [
+      "PENDIDIKAN AGAMA HINDU DAN BUDI PEKERTI",
+      "PENDIDIKAN PANCASILA",
+      "BAHASA INDONESIA",
+      "MATEMATIKA (UMUM)",
+      "ILMU PENGETAHUAN ALAM",
+      "ILMU PENGETAHUAN SOSIAL",
+      "BAHASA INGGRIS",
+      "PENDIDIKAN JASMANI, OLAHRAGA, DAN KESEHATAN",
+      "INFORMATIKA",
+      "PRAKARYA DAN KEWIRAUSAHAAN",
+      "MUATAN LOKAL"
+    ];
+
+    const mapelXI_XII = [
+      "PENDIDIKAN AGAMA HINDU DAN BUDI PEKERTI",
+      "PENDIDIKAN PANCASILA",
+      "BAHASA INDONESIA",
+      "MATEMATIKA TINGKAT LANJUT",
+      "BAHASA INGGRIS",
+      "BIOLOGI",
+      "KIMIA",
+      "FISIKA",
+      "EKONOMI",
+      "GEOGRAFI",
+      "SEJARAH",
+      "SOSIOLOGI",
+      "SENI BUDAYA",
+      "PENDIDIKAN JASMANI, OLAHRAGA, DAN KESEHATAN",
+      "MUATAN LOKAL"
+    ];
+
+    function getMapelBySemester(semester) {
+      return semester <= 2 ? mapelX : mapelXI_XII;
+    }
+
+    function loadMapel() {
+      const semester = parseInt(document.getElementById('semester').value);
+      const mapelList = getMapelBySemester(semester);
+      const formDiv = document.getElementById('nilaiForm');
+      formDiv.innerHTML = '';
+      mapelList.forEach(mapel => {
+        formDiv.innerHTML += `
+          <div>
+            ${mapel}<br>
+            <input type="number" id="${mapel}" placeholder="Masukkan nilai" min="0" max="100">
+          </div>
+        `;
+      });
+      loadTabelNilai();
+    }
+
+    function simpanNilai() {
+      const semester = document.getElementById('semester').value;
+      const mapelList = getMapelBySemester(parseInt(semester));
+      const data = {};
+      mapelList.forEach(mapel => {
+        const val = parseFloat(document.getElementById(mapel).value);
+        if (!isNaN(val)) data[mapel] = val;
+      });
+      localStorage.setItem(`nilai_semester_${semester}`, JSON.stringify(data));
+      loadTabelNilai();
+      renderGrafik();
+    }
+
+    function loadTabelNilai() {
+      const semester = document.getElementById('semester').value;
+      const data = JSON.parse(localStorage.getItem(`nilai_semester_${semester}`)) || {};
+      let html = '<table id="exportTable"><tr><th>Mapel</th><th>Nilai</th></tr>';
+      let total = 0, tertinggi = -1, terendah = 999, mapelTinggi = '', mapelRendah = '', jumlah = 0;
+      for (const mapel in data) {
+        const nilai = data[mapel];
+        total += nilai;
+        if (nilai > tertinggi) { tertinggi = nilai; mapelTinggi = mapel; }
+        if (nilai < terendah) { terendah = nilai; mapelRendah = mapel; }
+        html += `<tr><td>${mapel}</td><td>${nilai}</td></tr>`;
+        jumlah++;
+      }
+      html += '</table>';
+      document.getElementById('tabelNilai').innerHTML = html;
+
+      let rata2 = jumlah > 0 ? (total / jumlah).toFixed(2) : '-';
+      document.getElementById('summary').innerText = jumlah > 0 ?
+        `📊 Rata-rata: ${rata2} | 🏆 Tertinggi: ${mapelTinggi} (${tertinggi}) | 💔 Terendah: ${mapelRendah} (${terendah})` : '';
+    }
+
+    function renderGrafik() {
+      const ctx = document.getElementById('grafikNilai').getContext('2d');
+      const labels = [], data = [];
+      for (let i = 1; i <= 6; i++) {
+        const d = JSON.parse(localStorage.getItem(`nilai_semester_${i}`));
+        if (d) {
+          const nilaiArr = Object.values(d);
+          const rata2 = nilaiArr.reduce((a, b) => a + b, 0) / nilaiArr.length;
+          labels.push(`Semester ${i}`);
+          data.push(parseFloat(rata2.toFixed(2)));
+        }
+      }
+      if (window.myChart) window.myChart.destroy();
+      window.myChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Rata-rata Nilai per Semester',
+            data: data,
+            backgroundColor: '#64b5f6'
+          }]
+        },
+        options: {
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 100
+            }
+          }
+        }
+      });
+    }
+
+    async function exportPDF() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.text("Rekapan Nilai Nicky", 20, 20);
+      const rows = [];
+      document.querySelectorAll("#exportTable tr").forEach((row, i) => {
+        const cols = Array.from(row.querySelectorAll("td, th")).map(cell => cell.textContent);
+        rows.push(cols);
+      });
+      doc.autoTable({ head: [rows[0]], body: rows.slice(1), startY: 30 });
+      doc.save("rekapan-nilai.pdf");
+    }
+
+    function exportExcel() {
+      const semester = document.getElementById('semester').value;
+      const data = JSON.parse(localStorage.getItem(`nilai_semester_${semester}`)) || {};
+      const sheet = [["Mapel", "Nilai"]];
+      for (const mapel in data) {
+        sheet.push([mapel, data[mapel]]);
+      }
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.aoa_to_sheet(sheet);
+      XLSX.utils.book_append_sheet(wb, ws, "Semester " + semester);
+      XLSX.writeFile(wb, `rekapan_nilai_semester_${semester}.xlsx`);
+    }
+
+    window.onload = () => {
+      loadMapel();
+      renderGrafik();
+    };
+  </script>
+</body>
+</html>
