@@ -1,0 +1,270 @@
+<!DOCTYPE html><html>
+<head>
+  <title>📚 Rekapan Nilai Rapor</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #313437;
+      margin: 0;
+      padding: 20px;
+      color: #939c9c;
+    }
+    h1, h2 {
+      text-align: center;
+      color: #e78c18;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background-color: #4a4b54;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      color: #e0e0e0;
+    }
+    select, input[type=number], input[type=text], button {
+      padding: 8px;
+      margin: 5px;
+      border-radius: 6px;
+      border: 1px solid #5b4e47;
+      font-size: 14px;
+      background-color: #313437;
+      color: #e0e0e0;
+    }
+    button {
+      background-color: #7c625d;
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #e78c18;
+      color: #313437;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      border-color: #5b4e47;
+    }
+    th, td {
+      border: 1px solid #5b4e47;
+      padding: 8px;
+      text-align: center;
+    }
+    th {
+      background-color: #5a747a;
+      color: #ffffff;
+    }
+    td {
+      background-color: #313437;
+      color: #e0e0e0;
+    }
+    .summary {
+      margin-top: 20px;
+      font-weight: bold;
+      color: #e78c18;
+    }
+    #loginForm {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <h1>📚 Rekapan Nilai RaporKu</h1>
+  <div id="loginForm">
+    <h2>Masukkan Nama Kamu</h2>
+    <input type="text" id="username" placeholder="Masukkan">
+    <button onclick="mulai()">Mulai</button>
+  </div>
+  <div class="container" style="display:none">
+    <label for="semester">Semester:</label>
+    <select id="semester" onchange="loadMapel()">
+      <option value="1">Semester 1</option>
+      <option value="2">Semester 2</option>
+      <option value="3">Semester 3</option>
+      <option value="4">Semester 4</option>
+      <option value="5">Semester 5</option>
+      <option value="6">Semester 6</option>
+    </select>
+    <div id="nilaiForm"></div>
+    <button onclick="simpanNilai()">💾 Simpan Nilai</button>
+    <button onclick="exportPDF()">📄 Export ke PDF</button>
+    <button onclick="exportExcel()">📊 Export ke Excel</button>
+    <button onclick="toggleTheme()">🎨 Ganti Tema</button>
+    <div id="tabelNilai"></div>
+    <div class="summary" id="summary"></div>
+    <canvas id="chart" style="margin-top: 20px;"></canvas>
+    <div class="summary" id="rankingSummary"></div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    let currentUser = '';
+    let darkMode = true;
+    let chartInstance;const kelasX = [
+  "PENDIDIKAN AGAMA DAN BUDI PEKERTI",
+  "PENDIDIKAN PANCASILA",
+  "BAHASA INDONESIA",
+  "MATEMATIKA (UMUM)",
+  "ILMU PENGETAHUAN ALAM",
+  "ILMU PENGETAHUAN SOSIAL",
+  "BAHASA INGGRIS",
+  "PENDIDIKAN JASMANI, OLAHRAGA, DAN KESEHATAN",
+  "INFORMATIKA",
+  "PRAKARYA DAN KEWIRAUSAHAAN",
+  "MUATAN LOKAL"
+];
+
+const kelasXI_XII = [
+  "PENDIDIKAN AGAMA DAN BUDI PEKERTI",
+  "PENDIDIKAN PANCASILA",
+  "BAHASA INDONESIA",
+  "MATEMATIKA (UMUM)",
+  "MATEMATIKA TINGKAT LANJUT (PILIHAN)",
+  "BIOLOGI (PILIHAN)",
+  "KIMIA (PILIHAN)",
+  "FISIKA",
+  "BAHASA INGGRIS",
+  "PENDIDIKAN JASMANI, OLAHRAGA, DAN KESEHATAN",
+  "SEJARAH",
+  "GEOGRAFI",
+  "EKONOMI (PILIHAN)",
+  "SOSIOLOGI",
+  "SENI BUDAYA",
+  "MUATAN LOKAL"
+];
+
+function mulai() {
+  const nama = document.getElementById('username').value.trim();
+  if (!nama) return alert("Masukkan nama dulu ya!");
+  currentUser = nama;
+  document.getElementById("loginForm").style.display = "none";
+  document.querySelector(".container").style.display = "block";
+  loadMapel();
+  updateRanking();
+}
+
+function getMapelBySemester(semester) {
+  return semester <= 2 ? kelasX : kelasXI_XII;
+}
+
+function loadMapel() {
+  const semester = document.getElementById('semester').value;
+  const mapelList = getMapelBySemester(parseInt(semester));
+  const formDiv = document.getElementById('nilaiForm');
+  formDiv.innerHTML = '';
+  mapelList.forEach(mapel => {
+    const id = mapel.replace(/\s+/g, '_');
+    formDiv.innerHTML += `
+      <div>
+        ${mapel}<br>
+        <input type="number" id="${id}" placeholder="Masukkan nilai" min="0" max="100">
+      </div>
+    `;
+  });
+  loadTabelNilai();
+}
+
+function simpanNilai() {
+  const semester = document.getElementById('semester').value;
+  const mapelList = getMapelBySemester(parseInt(semester));
+  const data = {};
+  mapelList.forEach(mapel => {
+    const id = mapel.replace(/\s+/g, '_');
+    const val = parseFloat(document.getElementById(id).value);
+    if (!isNaN(val)) data[mapel] = val;
+  });
+  localStorage.setItem(`nilai_${currentUser}_semester_${semester}`, JSON.stringify(data));
+  loadTabelNilai();
+  updateRanking();
+}
+
+function loadTabelNilai() {
+  const semester = document.getElementById('semester').value;
+  const data = JSON.parse(localStorage.getItem(`nilai_${currentUser}_semester_${semester}`)) || {};
+  let html = '<table><tr><th>Mapel</th><th>Nilai</th></tr>';
+  let total = 0, tertinggi = -1, terendah = 999, mapelTinggi = '', mapelRendah = '', jumlah = 0;
+  let labels = [], values = [];
+  for (const mapel in data) {
+    const nilai = data[mapel];
+    total += nilai;
+    if (nilai > tertinggi) { tertinggi = nilai; mapelTinggi = mapel; }
+    if (nilai < terendah) { terendah = nilai; mapelRendah = mapel; }
+    html += `<tr><td>${mapel}</td><td>${nilai}</td></tr>`;
+    jumlah++;
+    labels.push(mapel);
+    values.push(nilai);
+  }
+  html += '</table>';
+  document.getElementById('tabelNilai').innerHTML = html;
+
+  let rata2 = jumlah > 0 ? (total / jumlah).toFixed(2) : '-';
+  document.getElementById('summary').innerText = jumlah > 0 ?
+    `📊 Rata-rata: ${rata2}\n🏆 Tertinggi: ${mapelTinggi} (${tertinggi})\n💔 Terendah: ${mapelRendah} (${terendah})` : '';
+
+  renderChart(labels, values);
+}
+
+function renderChart(labels, data) {
+  if (chartInstance) chartInstance.destroy();
+  const ctx = document.getElementById('chart');
+  chartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Nilai',
+        data,
+        backgroundColor: '#e78c18'
+      }]
+    },
+    options: {
+      responsive: true,
+      scales: {
+        y: { beginAtZero: true, max: 100 }
+      }
+    }
+  });
+}
+
+function updateRanking() {
+  let semesterData = [];
+  for (let i = 1; i <= 6; i++) {
+    const nilai = JSON.parse(localStorage.getItem(`nilai_${currentUser}_semester_${i}`));
+    if (nilai) {
+      const values = Object.values(nilai);
+      const avg = values.reduce((a,b) => a + b, 0) / values.length;
+      semesterData.push({ semester: i, avg });
+    }
+  }
+  semesterData.sort((a, b) => b.avg - a.avg);
+  let rankHTML = '<h3>📈 Ranking Semester Berdasarkan Rata-rata</h3><ol>';
+  semesterData.forEach(item => {
+    rankHTML += `<li>Semester ${item.semester} - Rata-rata: ${item.avg.toFixed(2)}</li>`;
+  });
+  rankHTML += '</ol>';
+  document.getElementById('rankingSummary').innerHTML = rankHTML;
+}
+
+function exportPDF() {
+  window.print();
+}
+
+function exportExcel() {
+  alert("Export Excel belum tersedia di versi ini. Akan ditambahkan nanti!");
+}
+
+function toggleTheme() {
+  alert("Tema sudah disesuaikan otomatis berdasarkan latar belakang!");
+}
+
+  </script>
+  <footer style="background-color: #313437; padding: 20px; text-align: center; font-size: 14px; color: #e78c18; margin-top: 40px;">
+    <strong>📘 TIM PENGEMBANG</strong><br>
+    💻 Dibuat oleh <strong>Nicky</strong><br>
+    🤖 Powered by <strong>ChatGPT</strong><br>
+    🌐 Hosted by <a href="https://vercel.com" target="_blank" style="color: #e78c18; text-decoration: none;"><strong>Vercel</strong></a> | © 2025
+  </footer>
+</body>
+</html>
